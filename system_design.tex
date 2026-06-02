@@ -1,0 +1,121 @@
+\chapter{SYSTEM DESIGN}
+
+\section{Material and Dataset}
+The foundational element of any deep learning application in medical image analysis is the quality, diversity, and annotation precision of the underlying dataset. The dataset utilized in this study, referred to as the Oxidative Stress Sperm Dataset, comprises 389 high-resolution ($1280 \times 720$ pixels) microscopic images of human sperm cells. These images were acquired from 9 distinct patients, ensuring a degree of biological and clinical variance necessary for training robust generalization models. High-resolution imaging is particularly critical in this domain, as the morphological differences between various sperm head anomalies are often subtle and require fine-grained spatial details to be accurately distinguished.
+
+A total of 6,701 individual sperm cells were meticulously identified and manually annotated. Unlike standard object detection datasets that rely solely on rectangular bounding boxes, the annotations in this dataset were generated using precise polygon boundaries. This approach is highly advantageous because it delineates the exact morphological structures and contours of the sperm heads, providing a much richer supervisory signal for instance segmentation models compared to coarse bounding boxes.
+
+Figure \ref{fig:patient_contribution} illustrates the contribution of each patient to the overall dataset. The number of images varies significantly per patient. This unequal distribution reflects the natural variance encountered in real-world clinical data collection, where sample availability, concentration, and quality differ from one patient to another. 
+
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=0.85\textwidth]{report_figures/fig_patient_contribution.pdf}
+    \caption{Distribution of acquired microscopic images across different patients, highlighting the biological variance and unequal data contribution typical in clinical settings.}
+    \label{fig:patient_contribution}
+\end{figure}
+
+Furthermore, the density of sperm cells varies significantly across the captured microscopic frames. As depicted in Figure \ref{fig:objects_per_image}, the number of annotated objects per image ranges widely, with a mean of approximately 17.2 cells per image. Some frames are relatively sparse, containing only a few isolated cells, while others are densely populated, presenting challenges such as cellular occlusion and overlapping boundaries. This variance necessitates a robust detection model capable of maintaining high recall in dense regions without generating false positives in sparse areas.
+
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=0.7\textwidth]{report_figures/fig_objects_per_image.pdf}
+    \caption{Frequency distribution of the number of annotated sperm cells per image, demonstrating the variability in cellular density across the dataset.}
+    \label{fig:objects_per_image}
+\end{figure}
+
+The dataset is categorized into five distinct morphological classes based on sperm head characteristics, which are critical indicators of male fertility potential and oxidative stress impacts. The overall class distribution is inherently imbalanced, a common phenomenon in medical and biological datasets where healthy or typical instances often outnumber pathological ones. Figure \ref{fig:class_distribution} provides a detailed view of the instance count and proportion for each morphological category.
+
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=\textwidth]{report_figures/fig_class_distribution.pdf}
+    \caption{Overall morphological class distribution across the dataset: (a) Absolute instance counts per class and (b) Proportional representation of each class, illustrating the inherent class imbalance.}
+    \label{fig:class_distribution}
+\end{figure}
+
+The specific morphological categories and their respective representations in the dataset are as follows:
+\begin{itemize}
+    \item \textbf{NH (Normal Head)}: 2,370 instances (35.4\%). This class represents sperm with healthy, typical morphological profiles, forming the majority class.
+    \item \textbf{SH (Small Head)}: 1,697 instances (25.3\%). Characterized by an abnormally small head size, often associated with reduced chromatin content.
+    \item \textbf{MH (Medium Head)}: 1,343 instances (20.0\%). An intermediate anomaly category exhibiting slight deviations from the normal head dimensions.
+    \item \textbf{BH (Big Head)}: 808 instances (12.1\%). Characterized by an enlarged head size, frequently linked to extra chromosomal material or improper maturation.
+    \item \textbf{DEG (Degenerative)}: 483 instances (7.2\%). The minority class, representing severely malformed, degraded, or amorphous sperm heads, often indicative of high oxidative stress.
+\end{itemize}
+
+Beyond the frequency of occurrence, the physical dimensions of the bounding boxes also vary significantly depending on the assigned morphological class. Figure \ref{fig:object_sizes} demonstrates the bounding box size distribution for each class. As expected, instances labeled as "Big Head" (BH) occupy a noticeably larger spatial area compared to "Small Head" (SH) and "Normal Head" (NH) instances. This spatial variance acts as an implicit feature that the neural networks must learn to leverage during the classification phase.
+
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{report_figures/fig_object_sizes.pdf}
+    \caption{Bounding box size distribution per morphological class, represented by the square root of the bounding box area in pixels. The plot confirms the expected physical dimension variations among the morphological categories.}
+    \label{fig:object_sizes}
+\end{figure}
+
+To ensure rigorous model evaluation and to prevent any potential data leakage during the training phase, the dataset was meticulously partitioned into training, validation, and testing sets. A simple random split could easily distort the class proportions, especially for minority classes like DEG. Therefore, a stratified splitting strategy was employed to ensure a consistent and balanced representation of morphological variations across all subsets. Figure \ref{fig:split_comparison} visually demonstrates the success of this splitting strategy, showing proportional distributions across all three sets.
+
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{report_figures/fig_split_comparison.pdf}
+    \caption{Comparison of morphological class distribution across the training, validation, and testing splits, verifying that the stratified partitioning maintained the underlying data distribution.}
+    \label{fig:split_comparison}
+\end{figure}
+
+Table \ref{tab:dataset_splits} summarizes the exact numerical breakdown of the dataset splits utilized to train, tune, and evaluate the deep learning pipelines in this study.
+
+\begin{table}[hbt!]
+    \centering
+    \caption{Detailed Dataset Split Statistics per Class}
+    \begin{tabular}{lcccccc}
+        \toprule
+        \textbf{Split} & \textbf{Images} & \textbf{NH} & \textbf{SH} & \textbf{MH} & \textbf{BH} & \textbf{DEG} \\
+        \midrule
+        Training & 272 & 1696 & 1171 & 950 & 580 & 336 \\
+        Validation & 58 & 338 & 265 & 211 & 110 & 64 \\
+        Testing & 59 & 336 & 261 & 182 & 118 & 83 \\
+        \midrule
+        \textbf{Total} & \textbf{389} & \textbf{2370} & \textbf{1697} & \textbf{1343} & \textbf{808} & \textbf{483} \\
+        \bottomrule
+    \end{tabular}
+    \label{tab:dataset_splits}
+\end{table}
+
+\clearpage
+
+\section{Method}
+The task of analyzing sperm morphology presents several computer vision challenges, including varying illumination, overlapping cells, artifacts, and extremely subtle inter-class differences. To achieve high-accuracy detection and classification of sperm cell morphology under these conditions, this study investigates and compares two fundamentally distinct deep learning methodologies. 
+
+As illustrated in the proposed system architecture (Figure \ref{fig:pipeline_architecture}), the first approach utilizes a unified, end-to-end architecture (Pipeline A) for simultaneous detection and classification via instance segmentation. The second approach (Pipeline B) adopts a more traditional, decoupled multi-stage framework, separating the spatial localization task from the fine-grained morphological classification task.
+
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=\textwidth]{report_figures/fig_pipeline_architecture.pdf}
+    \caption{The proposed system architecture illustrating two parallel methodologies. Pipeline A utilizes the YOLOv12m architecture for unified, simultaneous object detection and instance classification. Pipeline B decouples the analytical process, employing a DeepLabV3+ semantic segmentation model for binary sperm localization, followed by cropping mechanisms and specialized convolutional classifiers (EfficientNet-B7 and ConvNeXt) for final morphology classification.}
+    \label{fig:pipeline_architecture}
+\end{figure}
+
+\subsection{Pipeline A: Unified Detection and Segmentation (YOLOv12m)}
+The first methodology employs the YOLOv12m (Medium variant) architecture. The YOLO (You Only Look Once) family of models has established itself as the state-of-the-art in single-stage object detection, renowned for its exceptional real-time inference speeds and high spatial accuracy. The version 12 iteration introduces significant architectural improvements in its backbone feature extractor, advanced neck modules for multi-scale feature fusion (such as improved Path Aggregation Networks), and an optimized detection head.
+
+In this pipeline, YOLOv12m is specifically configured to perform instance segmentation rather than standard object detection. This means the network directly ingests the full-resolution microscope images and simultaneously predicts three critical outputs for every detected sperm cell: precise rectangular bounding boxes, continuous class probabilities, and pixel-level segmentation masks. 
+
+This end-to-end approach is highly efficient. By assigning each instance to one of the five morphological classes (NH, SH, MH, BH, DEG) and generating a precise contour mask in a single forward pass, the model leverages the inherent relationships between the object's shape, its localization, and its semantic class. The choice of the "Medium" (m) scale architecture provides an optimal balance, offering sufficient parameter capacity to learn the complex morphological features without incurring the prohibitive computational latency associated with larger models.
+
+\subsection{Pipeline B: Multi-Stage Segmentation and Classification}
+While unified architectures are highly efficient, decoupling the pipeline can sometimes yield superior performance by allowing the deployment of specialized, heavyweight architectures for specific sub-tasks. The second methodology adopts this multi-stage approach, separating the problem into a localization phase followed by a dedicated morphological classification phase.
+
+\subsubsection{Phase 1: Sperm Localization (DeepLabV3+)}
+In the initial localization stage, a DeepLabV3+ semantic segmentation network is deployed exclusively to solve a binary classification problem: separating sperm cells (foreground) from the complex microscopic background. DeepLabV3+ is a highly regarded architecture for semantic segmentation, primarily due to its Atrous Spatial Pyramid Pooling (ASPP) module. 
+
+The ASPP module applies atrous (dilated) convolutions at multiple parallel dilation rates. This allows the network to effectively capture multi-scale contextual information and expand its receptive field without losing spatial resolution. This is particularly crucial for microscopic images where the background contains cellular debris and fluid variations, and where sperm cells might appear at slightly different scales. The output of this stage is a highly accurate binary segmentation mask localizing all sperm cells within the frame, entirely disregarding their specific morphological class.
+
+\subsubsection{Phase 2: Morphological Classification (EfficientNet-B7 and ConvNeXt)}
+Following the localization phase, the binary masks generated by DeepLabV3+ are analyzed to extract bounding box coordinates for each individual cell. The original high-resolution images are then cropped using these coordinates to isolate individual sperm cells. These localized, single-cell Regions of Interest (ROIs) are subsequently fed into dedicated, high-capacity image classification networks. 
+
+To evaluate and determine the optimal feature extraction architecture for this fine-grained classification task, two distinct, state-of-the-art convolutional neural networks are employed and rigorously compared:
+
+\begin{itemize}
+    \item \textbf{EfficientNet-B7}: EfficientNet is renowned for its principled compound scaling method. Instead of arbitrarily deepening or widening the network to achieve better accuracy, EfficientNet uniformly scales the network's width, depth, and input resolution using a fixed set of scaling coefficients. The B7 variant is one of the largest and most powerful models in the family, possessing immense feature extraction capabilities. Its use in this pipeline is aimed at capturing the most subtle, fine-grained texture and shape variations necessary to distinguish between similar classes (e.g., Normal Head vs. Medium Head).
+    
+    \item \textbf{ConvNeXt}: ConvNeXt represents a modernized approach to pure convolutional architectures. In recent years, Vision Transformers (ViTs) have dominated many computer vision benchmarks. The creators of ConvNeXt systematically analyzed ViTs and integrated their most successful design elements—such as larger kernel sizes ($7 \times 7$), inverted bottlenecks, fewer activation functions, and the use of Layer Normalization—back into a standard ResNet-style architecture. The result is a pure CNN that bridges the performance gap with Transformers while maintaining the simplicity, inductive biases, and computational efficiency of standard convolutional networks.
+\end{itemize}
+
+Each classifier independently processes the cropped ROIs and assigns a final morphological probability distribution across the five categories (NH, SH, MH, BH, DEG). This multi-stage pipeline allows for a comprehensive, detailed comparative analysis against the unified YOLO approach, evaluating trade-offs between end-to-end simplicity and the potential accuracy gains of specialized, heavyweight classifiers.
