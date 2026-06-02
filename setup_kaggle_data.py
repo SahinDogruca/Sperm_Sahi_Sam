@@ -18,9 +18,9 @@ from pathlib import Path
 # ──────────────────────────────────────────────
 # Kaynak (Kaggle input — read-only)
 # ──────────────────────────────────────────────
-INPUT_BASE = Path("/kaggle/input/datasets/sahindogruca/oksidatifstress")
-INPUT_OKSIDATIF = INPUT_BASE / "OksidatifStress"
-INPUT_DATASET   = INPUT_BASE / "dataset"
+INPUT_BASE = Path("/kaggle/input/datasets/sahindogruca")
+INPUT_OKSIDATIF = INPUT_BASE / "oksidatifstress" / "OksidatifStress"
+INPUT_DATASET   = INPUT_BASE / "dataset" / "dataset"
 
 # ──────────────────────────────────────────────
 # Hedef (Kaggle working — read-write)
