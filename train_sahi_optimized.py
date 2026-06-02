@@ -39,13 +39,13 @@ USE_TUNED = False   # True yaparsanız Optuna sonuçlarını birleştirir
 # ──────────────────────────────────────────────
 # Varsayılan (optimize edilmiş) parametreler
 params = {
-    "lr0":           0.0008,
+    "lr0":           0.001,
     "lrf":           0.01,
     "warmup_epochs": 5,
     "box":           7.5,     # ↑ Kesin lokalizasyon → mAP@50-95 artışı
     "cls":           2.5,     # ↑ Sınıflandırma odağı → DEG recall artışı
     "dfl":           2.0,     # ↑ Distribution focal loss → bbox kalitesi
-    "copy_paste":    0.5,     # ↑ Küçük objeleri çoğalt
+    "copy_paste":    0.3,     # ↑ Küçük objeleri çoğalt
     "degrees":       10.0,
     "scale":         0.5,     # ↑ Agresif zoom → küçük objeler büyür
     "hsv_h":         0.015,
