@@ -21,6 +21,13 @@ Kullanım:
 
 import json
 from pathlib import Path
+import numpy as np
+
+# NumPy 2.0+ uyumluluk yaması (np.trapz kaldırıldı, yerine np.trapezoid geldi)
+# Ultralytics içindeki metrics hesaplamasında hata vermemesi için:
+if not hasattr(np, 'trapz'):
+    np.trapz = np.trapezoid
+
 from ultralytics import YOLO
 
 # ──────────────────────────────────────────────

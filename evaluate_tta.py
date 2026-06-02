@@ -16,6 +16,12 @@ Otomatik olarak:
   - 4 sonucu karşılaştırmalı tablo ile gösterir
 """
 
+import numpy as np
+
+# NumPy 2.0+ uyumluluk yaması
+if not hasattr(np, 'trapz'):
+    np.trapz = np.trapezoid
+
 from ultralytics import YOLO
 from pathlib import Path
 
