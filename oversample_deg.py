@@ -1,14 +1,13 @@
 """
-DEG Oversampling + Geliştirilmiş Eğitim Dataseti
+DEG Oversampling
 ==================================================
-DEG sınıfı içeren görüntüleri 2x çoğaltarak sınıf dengesizliğini azaltır.
+DEG sınıfı içeren patch'leri 2x çoğaltarak sınıf dengesizliğini azaltır.
 SAHI dataset üzerinde çalışır (prepare_sahi_dataset.py çıktısı).
+
+Ön koşul: prepare_sahi_dataset.py çalıştırılmış olmalı.
 
 Kullanım:
   python oversample_deg.py
-
-Not: Bu script YOLO_Sahi_Dataset üzerinde in-place çalışır.
-     Sadece train split'ine uygular.
 """
 
 import shutil
@@ -16,10 +15,9 @@ from pathlib import Path
 from collections import Counter
 
 # ──────────────────────────────────────────────
-# Ayarlar
+# Kaggle Paths
 # ──────────────────────────────────────────────
-BASE_DIR    = Path(__file__).parent
-DATASET_DIR = BASE_DIR / "YOLO_Sahi_Dataset"   # SAHI çıktısı
+DATASET_DIR = Path("/kaggle/working/YOLO_Sahi_Dataset")
 REPEAT      = 2   # DEG içeren patch'leri kaç kere tekrarla (2 = 2 ek kopya)
 
 # Sınıf sıralaması
@@ -115,6 +113,7 @@ def main():
 
     print(f"\nToplam train patch (sonrası): {total_labels + added_patches}")
     print("[OK] DEG oversampling tamamlandı.")
+    print(f"\nSonraki adım: python train_sahi_optimized.py")
 
 
 if __name__ == "__main__":

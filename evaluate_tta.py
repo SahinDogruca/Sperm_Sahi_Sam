@@ -1,122 +1,161 @@
 """
-TTA (Test-Time Augmentation) ile Değerlendirme
-===============================================
-Eğitilmiş modeli TTA aktif olarak val/test setinde değerlendirir.
-TTA, multi-scale + flip ile inference yaparak mAP'i 1-2% artırır.
+TTA (Test-Time Augmentation) ile Değerlendirme — Val + Test
+=============================================================
+Eğitilmiş modeli TTA aktif/kapalı olarak hem val hem test setinde
+değerlendirir ve karşılaştırmalı tablo çıkarır.
 
-Ayrıca SAHI sliced inference da destekler (küçük objeler için optimal).
+Ön koşul: train_sahi_optimized.py ile eğitim tamamlanmış olmalı.
 
 Kullanım:
-  python evaluate_tta.py --weights /path/to/best.pt --data /path/to/data.yaml
+  python evaluate_tta.py
 
-Kaggle'da:
-  python evaluate_tta.py \\
-    --weights /kaggle/working/final_v2/sahi_optimized/weights/best.pt \\
-    --data /kaggle/working/data/data.yaml
+Otomatik olarak:
+  - best.pt weights'ini bulur
+  - Val split: Normal + TTA
+  - Test split: Normal + TTA
+  - 4 sonucu karşılaştırmalı tablo ile gösterir
 """
 
-import argparse
 from ultralytics import YOLO
+from pathlib import Path
+
+# ──────────────────────────────────────────────
+# Kaggle Paths
+# ──────────────────────────────────────────────
+DATA_YAML = "/kaggle/working/YOLO_Sahi_Dataset/data.yaml"
+WEIGHTS   = "/kaggle/working/final_v2/sahi_optimized/weights/best.pt"
+PROJECT   = "/kaggle/working/final_v2"
+
+IMGSZ  = 640
+BATCH  = 8
+DEVICE = "0"
+CONF   = 0.001
+IOU    = 0.6
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="TTA + SAHI Evaluation")
-    parser.add_argument("--weights", type=str, required=True,
-                        help="Eğitilmiş model weights yolu (best.pt)")
-    parser.add_argument("--data", type=str, required=True,
-                        help="data.yaml yolu")
-    parser.add_argument("--imgsz", type=int, default=640,
-                        help="Inference image size (SAHI dataset için 640)")
-    parser.add_argument("--batch", type=int, default=8,
-                        help="Batch size")
-    parser.add_argument("--device", type=str, default="0",
-                        help="Device (0, 0,1, cpu)")
-    parser.add_argument("--split", type=str, default="val",
-                        choices=["val", "test"],
-                        help="Hangi split'te değerlendir")
-    parser.add_argument("--no-tta", action="store_true",
-                        help="TTA'yı devre dışı bırak")
-    parser.add_argument("--conf", type=float, default=0.001,
-                        help="Confidence threshold")
-    parser.add_argument("--iou", type=float, default=0.6,
-                        help="NMS IoU threshold")
-    return parser.parse_args()
+def safe_get(results, key, default=0.0):
+    """results_dict'ten güvenli değer çek."""
+    try:
+        return float(results.results_dict.get(key, default))
+    except Exception:
+        return default
+
+
+def evaluate_split(model, split, augment, tag):
+    """Tek bir split'i değerlendir."""
+    print(f"\n{'─'*50}")
+    print(f"  [{tag}] split={split}, TTA={'AÇIK' if augment else 'KAPALI'}")
+    print(f"{'─'*50}")
+
+    results = model.val(
+        data=DATA_YAML,
+        imgsz=IMGSZ,
+        batch=BATCH,
+        device=DEVICE,
+        split=split,
+        conf=CONF,
+        iou=IOU,
+        augment=augment,
+        plots=True,
+        verbose=True,
+        project=PROJECT,
+        name=f"eval_{split}_{'tta' if augment else 'normal'}",
+        exist_ok=True,
+    )
+
+    return results
 
 
 def main():
-    args = parse_args()
+    print("=" * 70)
+    print("Model Değerlendirme — Val + Test × Normal + TTA")
+    print("=" * 70)
 
-    print("=" * 60)
-    print("Model Değerlendirme")
-    print("=" * 60)
-    print(f"  Weights : {args.weights}")
-    print(f"  Data    : {args.data}")
-    print(f"  Split   : {args.split}")
-    print(f"  TTA     : {'KAPALI' if args.no_tta else 'AÇIK'}")
-    print(f"  ImgSz   : {args.imgsz}")
-    print()
+    # Weights kontrolü
+    if not Path(WEIGHTS).exists():
+        print(f"\n[HATA] Weights bulunamadı: {WEIGHTS}")
+        print("Önce train_sahi_optimized.py çalıştırın.")
 
-    model = YOLO(args.weights)
+        # Alternatif weights ara
+        alt = Path(PROJECT).glob("**/best.pt")
+        for p in alt:
+            print(f"  Bulunan alternatif: {p}")
+        return
 
-    # ── 1. Normal değerlendirme ──
-    print("[1/2] Normal değerlendirme...")
-    results_normal = model.val(
-        data=args.data,
-        imgsz=args.imgsz,
-        batch=args.batch,
-        device=args.device,
-        split=args.split,
-        conf=args.conf,
-        iou=args.iou,
-        augment=False,
-        plots=True,
-        verbose=True,
-    )
+    print(f"\n  Weights : {WEIGHTS}")
+    print(f"  Data    : {DATA_YAML}")
+    print(f"  ImgSz   : {IMGSZ}")
 
-    # ── 2. TTA ile değerlendirme ──
-    if not args.no_tta:
-        print("\n[2/2] TTA ile değerlendirme...")
-        results_tta = model.val(
-            data=args.data,
-            imgsz=args.imgsz,
-            batch=args.batch,
-            device=args.device,
-            split=args.split,
-            conf=args.conf,
-            iou=args.iou,
-            augment=True,     # ← TTA aktif
-            plots=True,
-            verbose=True,
-        )
+    model = YOLO(WEIGHTS)
 
-        # ── Karşılaştırma ──
-        print("\n" + "=" * 60)
-        print("KARŞILAŞTIRMA")
-        print("=" * 60)
+    # ── 4 değerlendirme çalıştır ──
+    results = {}
 
-        def safe_get(results, key, default=0.0):
-            try:
-                return float(results.results_dict.get(key, default))
-            except:
-                return default
+    # 1. Val — Normal
+    results["val_normal"] = evaluate_split(model, "val", augment=False, tag="1/4")
 
-        metrics = [
-            ("mAP50(B)",    "metrics/mAP50(B)"),
-            ("mAP50-95(B)", "metrics/mAP50-95(B)"),
-            ("mAP50(M)",    "metrics/mAP50(M)"),
-            ("mAP50-95(M)", "metrics/mAP50-95(M)"),
-        ]
+    # 2. Val — TTA
+    results["val_tta"] = evaluate_split(model, "val", augment=True, tag="2/4")
 
-        print(f"{'Metric':<20s} {'Normal':>10s} {'TTA':>10s} {'Fark':>10s}")
-        print("-" * 52)
-        for name, key in metrics:
-            val_n = safe_get(results_normal, key)
-            val_t = safe_get(results_tta, key)
-            diff = val_t - val_n
-            sign = "+" if diff > 0 else ""
-            print(f"{name:<20s} {val_n:>10.4f} {val_t:>10.4f} {sign}{diff:>9.4f}")
+    # 3. Test — Normal
+    results["test_normal"] = evaluate_split(model, "test", augment=False, tag="3/4")
 
-    print("\n[OK] Değerlendirme tamamlandı.")
+    # 4. Test — TTA
+    results["test_tta"] = evaluate_split(model, "test", augment=True, tag="4/4")
+
+    # ── Karşılaştırma Tablosu ──
+    metrics = [
+        ("mAP50(B)",    "metrics/mAP50(B)"),
+        ("mAP50-95(B)", "metrics/mAP50-95(B)"),
+        ("mAP50(M)",    "metrics/mAP50(M)"),
+        ("mAP50-95(M)", "metrics/mAP50-95(M)"),
+        ("Precision(B)", "metrics/precision(B)"),
+        ("Recall(B)",    "metrics/recall(B)"),
+    ]
+
+    print("\n" + "=" * 90)
+    print("SONUÇ KARŞILAŞTIRMASI")
+    print("=" * 90)
+
+    header = f"{'Metric':<16s} │ {'Val':>8s} {'Val+TTA':>8s} {'Δ':>7s} │ {'Test':>8s} {'Test+TTA':>9s} {'Δ':>7s}"
+    print(header)
+    print("─" * 90)
+
+    for name, key in metrics:
+        vn = safe_get(results["val_normal"], key)
+        vt = safe_get(results["val_tta"], key)
+        tn = safe_get(results["test_normal"], key)
+        tt = safe_get(results["test_tta"], key)
+
+        vd = vt - vn
+        td = tt - tn
+
+        vs = f"+{vd:.4f}" if vd > 0 else f"{vd:.4f}"
+        ts = f"+{td:.4f}" if td > 0 else f"{td:.4f}"
+
+        print(f"{name:<16s} │ {vn:>8.4f} {vt:>8.4f} {vs:>7s} │ {tn:>8.4f} {tt:>9.4f} {ts:>7s}")
+
+    print("─" * 90)
+
+    # Per-class sonuçlar (varsa)
+    print("\n" + "=" * 70)
+    print("PER-CLASS DETAY (Val + TTA — en iyi sonuç)")
+    print("=" * 70)
+
+    try:
+        best_result = results["val_tta"]
+        # Per-class mAP erişimi YOLO versiyonuna göre değişebilir
+        if hasattr(best_result, 'box'):
+            class_names = best_result.names if hasattr(best_result, 'names') else {}
+            print("  (Per-class detaylar plots/ klasöründeki confusion matrix'te mevcuttur)")
+    except Exception:
+        pass
+
+    print(f"\n{'='*70}")
+    print("DEĞERLENDİRME TAMAMLANDI")
+    print(f"{'='*70}")
+    print(f"  Plots: {PROJECT}/eval_*/")
+    print(f"  Best weights: {WEIGHTS}")
 
 
 if __name__ == "__main__":

@@ -3,6 +3,8 @@ Geliştirilmiş YOLOv12m-seg Eğitim Scripti
 ==========================================
 SAHI sliced dataset + DEG oversampling sonrası kullanılır.
 
+Ön koşul: prepare_sahi_dataset.py + oversample_deg.py çalıştırılmış olmalı.
+
 Değişiklikler vs orijinal train_best.py:
   1. box=7.5, cls=2.5, dfl=2.0  → mAP@50-95 ve DEG için optimize
   2. mixup=0.15 eklendi
@@ -13,13 +15,8 @@ Değişiklikler vs orijinal train_best.py:
   7. close_mosaic=15
   8. perspective=0.0003 eklendi
 
-Kaggle'da çalıştırmak için:
-  1. prepare_sahi_dataset.py çıktısını upload et
-  2. DATA_YAML path'ini güncelle
-  3. Bu scripti çalıştır
-
-Alternatif: Optuna tune sonuçlarınız varsa, best_params.json'dan
-birleştirerek de kullanabilirsiniz.
+Kullanım:
+  python train_sahi_optimized.py
 """
 
 import json
@@ -27,9 +24,9 @@ from pathlib import Path
 from ultralytics import YOLO
 
 # ──────────────────────────────────────────────
-# Kaggle / Colab yolları — kendi ortamınıza göre güncelleyin
+# Kaggle Paths
 # ──────────────────────────────────────────────
-DATA_YAML = "/kaggle/working/data/data.yaml"      # SAHI dataset'in data.yaml'ı
+DATA_YAML = "/kaggle/working/YOLO_Sahi_Dataset/data.yaml"
 MODEL_PT  = "yolov12m-seg.pt"
 PROJECT   = "/kaggle/working/final_v2"
 
@@ -94,7 +91,7 @@ model.train(
     data=DATA_YAML,
     epochs=400,
     imgsz=640,              # SAHI patch'ler 640×640
-    batch=8,                # SAHI ile patch sayısı arttığı için batch artırılabilir
+    batch=16,                # SAHI ile patch sayısı arttığı için batch artırılabilir
     device=[0, 1],
     workers=4,
     cache="ram",
@@ -142,4 +139,5 @@ model.train(
 print("\n" + "=" * 60)
 print("Eğitim tamamlandı!")
 print(f"Sonuçlar: {PROJECT}/sahi_optimized/")
+print(f"\nSonraki adım: python evaluate_tta.py")
 print("=" * 60)

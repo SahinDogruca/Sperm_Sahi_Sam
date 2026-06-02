@@ -6,17 +6,19 @@ Polygon annotation'ları her patch'e göre kırpılır ve normalize edilir.
 
 Küçük objelerin (özellikle DEG ~20×20px) efektif boyutunu 2x artırır.
 
+Ön koşul: setup_kaggle_data.py çalıştırılmış olmalı.
+
 Kullanım:
   python prepare_sahi_dataset.py
 
 Çıktı:
-  YOLO_Sahi_Dataset/
+  /kaggle/working/YOLO_Sahi_Dataset/
     ├── train/images/   train/labels/
     ├── val/images/     val/labels/
     ├── test/images/    test/labels/
     └── data.yaml
 
-Sınıf sıralaması (prepare_yolo_dataset.py ile aynı):
+Sınıf sıralaması:
   DEG=0, NH=1, SH=2, MH=3, BH=4
 """
 
@@ -27,22 +29,12 @@ from PIL import Image
 from collections import Counter, defaultdict
 
 # ──────────────────────────────────────────────
-# Ayarlar
+# Kaggle Paths (/kaggle/working altındaki kopyalar)
 # ──────────────────────────────────────────────
-BASE_DIR    = Path(__file__).parent
-DATASET_DIR = BASE_DIR / "dataset"
-
-# SAM refined JSON'ları kullanmak için True yapın
-# (refine_masks_sam.py çalıştırıldıktan sonra)
-USE_REFINED_JSON = True
-
-if USE_REFINED_JSON:
-    JSON_DIR = BASE_DIR / "OksidatifStress" / "json_files_refined"
-    OUTPUT_DIR = BASE_DIR / "YOLO_Sahi_Dataset_Refined"
-    print("*** SAM-refined JSON'lar kullanılıyor ***")
-else:
-    JSON_DIR = BASE_DIR / "OksidatifStress" / "json_files"
-    OUTPUT_DIR = BASE_DIR / "YOLO_Sahi_Dataset"
+WORKING     = Path("/kaggle/working")
+DATASET_DIR = WORKING / "dataset"                          # train/val/test split'leri
+JSON_DIR    = WORKING / "OksidatifStress" / "json_files"   # SAM-refined veya orijinal
+OUTPUT_DIR  = WORKING / "YOLO_Sahi_Dataset"
 
 SPLITS = ["train", "val", "test"]
 
@@ -243,6 +235,9 @@ def main():
     print("=" * 60)
     print("SAHI-Style Sliced Dataset Preparation")
     print(f"Slice: {SLICE_W}×{SLICE_H}, Overlap: {OVERLAP_W:.0%}×{OVERLAP_H:.0%}")
+    print(f"JSON kaynak: {JSON_DIR}")
+    print(f"Dataset    : {DATASET_DIR}")
+    print(f"Çıktı      : {OUTPUT_DIR}")
     print("=" * 60)
 
     global_stats = {split: {"images": 0, "patches": 0, "labels_with_obj": 0}
@@ -332,7 +327,7 @@ def main():
 
     # ── data.yaml yaz ──────────────────────────────────
     yaml_lines = [
-        f"path: {OUTPUT_DIR.resolve()}",
+        f"path: {OUTPUT_DIR}",
         "train: train/images",
         "val: val/images",
         "test: test/images",
@@ -353,7 +348,8 @@ def main():
         print(f"  {split:5s}: {s['images']} img → {s['patches']} patches "
               f"({s['labels_with_obj']} with objects)")
     print(f"\nSınıf sıralaması: {LABEL2ID}")
-    print(f"Çıktı: {OUTPUT_DIR.resolve()}")
+    print(f"Çıktı: {OUTPUT_DIR}")
+    print(f"\nSonraki adım: python oversample_deg.py")
 
 
 if __name__ == "__main__":
