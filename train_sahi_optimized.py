@@ -91,7 +91,7 @@ model.train(
     data=DATA_YAML,
     epochs=400,
     imgsz=640,              # SAHI patch'ler 640×640
-    batch=16,                # SAHI ile patch sayısı arttığı için batch artırılabilir
+    batch=32,                # SAHI ile patch sayısı arttığı için batch artırılabilir
     device=[0, 1],
     workers=4,
     cache="ram",
