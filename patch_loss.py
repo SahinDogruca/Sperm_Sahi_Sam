@@ -46,7 +46,6 @@ CUSTOM_CLASS = '''class v8SegmentationLoss(v8DetectionLoss):
         """Calculate and return the loss for the YOLO model."""
         import torch
         import torch.nn.functional as F
-        from ultralytics.utils.ops import make_anchors
         
         loss = torch.zeros(4, device=self.device)  # box, cls, dfl
         feats, pred_masks, proto = preds if len(preds) == 3 else preds[1]
