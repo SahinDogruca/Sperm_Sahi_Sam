@@ -40,11 +40,9 @@ CUSTOM_CLASS = r'''class v8SegmentationLoss(v8DetectionLoss):
     def __init__(self, model):
         super().__init__(model)
         self.overlap = model.args.overlap_mask
-        print("\n" + "="*60)
         print("🚀 YOLOV12 ÖZEL LOSS AKTİF: SpermSeg Combo Loss devrede!")
         print("   - Boundary (Sınır) Loss (Kenar hassasiyeti x3)")
         print("   - Focal Tversky Loss (Zor hücreler odaklı)")
-        print("="*60 + "\n")
 
     def __call__(self, preds, batch):
         """Calculate and return the loss for the YOLO model."""
