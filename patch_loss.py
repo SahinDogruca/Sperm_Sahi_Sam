@@ -33,8 +33,8 @@ content = LOSS_FILE.read_text(encoding="utf-8")
 if "CUSTOM SPERM MORPHOLOGY COMBO LOSS" in content:
     print("⚠️ Sistem daha önce yamalanmış. Eski yama yeni sürümle OVERRIDE ediliyor (Değiştiriliyor)...")
 
-# Değiştirilecek Özel Sınıf Kodu
-CUSTOM_CLASS = '''class v8SegmentationLoss(v8DetectionLoss):
+# Değiştirilecek Özel Sınıf Kodu (Raw string olarak tanımlanmalı ki \n karakterleri patlamasın)
+CUSTOM_CLASS = r'''class v8SegmentationLoss(v8DetectionLoss):
     """Criterion class for computing training losses with Custom SpermSeg Combo Loss."""
 
     def __init__(self, model):
