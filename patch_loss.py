@@ -29,10 +29,9 @@ print(f"🎯 loss.py bulundu: {LOSS_FILE}")
 # Orijinal dosyayı oku
 content = LOSS_FILE.read_text(encoding="utf-8")
 
-# Eğer zaten yamalandıysa uyar
+# Eğer zaten yamalandıysa uyar, ama yine de GÜNCELLE
 if "CUSTOM SPERM MORPHOLOGY COMBO LOSS" in content:
-    print("✅ Sistem zaten özel loss fonksiyonu ile yamalanmış durumda!")
-    sys.exit(0)
+    print("⚠️ Sistem daha önce yamalanmış. Eski yama yeni sürümle OVERRIDE ediliyor (Değiştiriliyor)...")
 
 # Değiştirilecek Özel Sınıf Kodu
 CUSTOM_CLASS = '''class v8SegmentationLoss(v8DetectionLoss):
