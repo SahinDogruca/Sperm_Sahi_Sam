@@ -40,6 +40,11 @@ CUSTOM_CLASS = '''class v8SegmentationLoss(v8DetectionLoss):
     def __init__(self, model):
         super().__init__(model)
         self.overlap = model.args.overlap_mask
+        print("\n" + "="*60)
+        print("🚀 YOLOV12 ÖZEL LOSS AKTİF: SpermSeg Combo Loss devrede!")
+        print("   - Boundary (Sınır) Loss (Kenar hassasiyeti x3)")
+        print("   - Focal Tversky Loss (Zor hücreler odaklı)")
+        print("="*60 + "\n")
 
     def __call__(self, preds, batch):
         """Calculate and return the loss for the YOLO model."""
@@ -83,8 +88,12 @@ CUSTOM_CLASS = '''class v8SegmentationLoss(v8DetectionLoss):
 
         target_scores_sum = max(target_scores.sum(), 1)
 
-        # Cls loss
-        loss[2] = self.bce(pred_scores, target_scores.to(dtype)).sum() / target_scores_sum
+        # Cls loss + Özel Focal Loss Enjeksiyonu (gamma=1.5)
+        # Sınıflandırma dengesizliğini çözmek için argüman yerine doğrudan matematiğe eklendi
+        bce_cls = self.bce(pred_scores, target_scores.to(dtype))
+        probs_cls = pred_scores.sigmoid()
+        focal_weight_cls = torch.abs(target_scores - probs_cls) ** 1.5
+        loss[2] = (bce_cls * focal_weight_cls).sum() / target_scores_sum
 
         if fg_mask.sum():
             # Bbox loss
