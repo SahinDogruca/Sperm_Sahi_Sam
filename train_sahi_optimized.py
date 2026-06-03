@@ -62,6 +62,7 @@ params = {
     "close_mosaic": 100,
     "mixup": 0.15,  # YENİ: Görüntü blend → regularization
     "perspective": 0.0003,  # YENİ: Hafif perspektif → robustness
+    "fl_gamma": 1.5,
 }
 
 # Optuna sonuçlarını birleştir (opsiyonel)
