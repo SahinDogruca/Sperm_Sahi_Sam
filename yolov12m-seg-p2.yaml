@@ -1,0 +1,47 @@
+# YOLOv12m-seg-p2.yaml (Özel P2 Stride-4 Mimarisi)
+# Ultralytics standart segmentasyon kafasına P2 (yüksek çözünürlük) katmanı eklenmiştir.
+
+nc: 5  # Sınıf sayısı
+scales:
+  m: [1.00, 1.00, 512]
+
+backbone:
+  - [-1, 1, Conv, [64, 3, 2]]  # 0-P1/2
+  - [-1, 1, Conv, [128, 3, 2, 1, 2]]  # 1-P2/4 (Buradan besleneceğiz)
+  - [-1, 1, C3k2, [256, 1, True, 0.25]] # 2
+  - [-1, 1, Conv, [256, 3, 2, 1, 4]]  # 3-P3/8
+  - [-1, 1, C3k2, [512, 1, True, 0.25]] # 4
+  - [-1, 1, Conv, [512, 3, 2]]  # 5-P4/16
+  - [-1, 2, A2C2f, [512, 2, True, 4]] # 6
+  - [-1, 1, Conv, [512, 3, 2]]  # 7-P5/32
+  - [-1, 2, A2C2f, [512, 2, True, 1]] # 8
+
+head:
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']] # 9
+  - [[-1, 6], 1, Concat, [1]] # 10 cat P4
+  - [-1, 1, A2C2f, [512, 1, False, -1]] # 11
+
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']] # 12
+  - [[-1, 4], 1, Concat, [1]] # 13 cat P3
+  - [-1, 1, A2C2f, [256, 1, False, -1]] # 14 (P3)
+
+  # --- ÖZEL P2 (STRIDE-4) EKLENTİSİ BÖLÜMÜ ---
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']] # 15
+  - [[-1, 2], 1, Concat, [1]] # 16 cat P2 (Layer 2'den 256 kanal gelir)
+  - [-1, 1, C3k2, [256, 1, False]] # 17 (P2 Çıkışı - Yüksek Çözünürlük)
+
+  # --- AŞAĞI İNİŞ (DOWNSAMPLE) BÖLÜMÜ ---
+  - [-1, 1, Conv, [256, 3, 2]] # 18 (P2'yi P3'e küçült)
+  - [[-1, 14], 1, Concat, [1]] # 19
+  - [-1, 1, A2C2f, [256, 1, False, -1]] # 20 (P3 Çıkışı)
+
+  - [-1, 1, Conv, [256, 3, 2]] # 21 (P3'ü P4'e küçült)
+  - [[-1, 11], 1, Concat, [1]] # 22
+  - [-1, 1, A2C2f, [512, 1, False, -1]] # 23 (P4 Çıkışı)
+
+  - [-1, 1, Conv, [512, 3, 2]] # 24 (P4'ü P5'e küçült)
+  - [[-1, 8], 1, Concat, [1]] # 25
+  - [-1, 1, C3k2, [512, 1, True]] # 26 (P5 Çıkışı)
+
+  # P2, P3, P4 ve P5'i aynı anda Segment kafasına gönderir (4 Kafa)
+  - [[17, 20, 23, 26], 1, Segment, [nc, 32, 256]] # 27

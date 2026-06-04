@@ -163,8 +163,14 @@ CUSTOM_CLASS = r'''class v8SegmentationLoss(v8DetectionLoss):
         tversky = (TP + smooth) / (TP + alpha * FN + beta * FP + smooth)
         focal_tversky_loss = (1 - tversky) ** gamma
 
-        # 4. KOMBİNASYON (%50 Boundary BCE + %50 Focal Tversky)
-        total_loss_per_obj = 0.5 * bce_loss_per_obj + 0.5 * focal_tversky_loss
+        # 4. LOVASZ-SOFTMAX SÜROGATI (Soft-IoU / Jaccard Loss)
+        # mAP@50-95 değerini doğrudan maksimize etmek için Kesişim/Birleşim (IoU) optimizasyonu
+        intersection = TP
+        union = TP + FP + FN
+        iou_loss = 1.0 - (intersection + smooth) / (union + smooth)
+
+        # 5. ÜÇLÜ KOMBİNASYON (Boundary BCE + Focal Tversky + Soft-IoU)
+        total_loss_per_obj = 0.35 * bce_loss_per_obj + 0.35 * focal_tversky_loss + 0.30 * iou_loss
 
         return total_loss_per_obj.sum()
 
