@@ -11,14 +11,14 @@ Kullanım:
 """
 
 import shutil
+import argparse
 from pathlib import Path
 from collections import Counter
 
 # ──────────────────────────────────────────────
-# Kaggle Paths
+# Configuration
 # ──────────────────────────────────────────────
-DATASET_DIR = Path("/kaggle/working/YOLO_Sahi_Dataset")
-REPEAT      = 2   # DEG içeren patch'leri kaç kere tekrarla (2 = 2 ek kopya)
+REPEAT      = 2   # DEG içeren patch'leri/resimleri kaç kere tekrarla (2 = 2 ek kopya)
 
 # Sınıf sıralaması
 CLASS_ORDER = ["DEG", "NH", "SH", "MH", "BH"]
@@ -26,8 +26,14 @@ DEG_CLASS_ID = 0   # DEG sınıfının YOLO ID'si
 
 
 def main():
-    train_img_dir = DATASET_DIR / "train" / "images"
-    train_lbl_dir = DATASET_DIR / "train" / "labels"
+    parser = argparse.ArgumentParser(description="Oversample DEG class in YOLO dataset")
+    parser.add_argument("--dataset_dir", type=str, default="/kaggle/working/YOLO_Sahi_Dataset",
+                        help="Path to the prepared YOLO dataset directory")
+    args = parser.parse_args()
+
+    dataset_dir = Path(args.dataset_dir)
+    train_img_dir = dataset_dir / "train" / "images"
+    train_lbl_dir = dataset_dir / "train" / "labels"
 
     if not train_img_dir.exists():
         print(f"[HATA] {train_img_dir} bulunamadı!")
