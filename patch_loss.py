@@ -142,7 +142,9 @@ CUSTOM_CLASS = r'''class v8SegmentationLoss(v8DetectionLoss):
 
         # 2. BOUNDARY (SINIR) LOSS EKLENTİSİ
         gt_unsqueeze = cropped_gt.unsqueeze(0)
-        gt_pool = F.max_pool2d(gt_unsqueeze, kernel_size=3, stride=1, padding=1)
+        # 5x5 kernel ile sınır bölgesini kalınlaştırıyoruz (daha iyi sınır odaklanması)
+gt_pool = F.max_pool2d(gt_unsqueeze, kernel_size=5, stride=1, padding=2)
+
         boundary_mask = (gt_pool - gt_unsqueeze) > 0
         boundary_mask = boundary_mask.squeeze(0)
 
@@ -171,7 +173,7 @@ CUSTOM_CLASS = r'''class v8SegmentationLoss(v8DetectionLoss):
 
         # 5. ÜÇLÜ KOMBİNASYON (Boundary BCE + Focal Tversky + Soft-IoU)
         total_loss_per_obj = 0.35 * bce_loss_per_obj + 0.35 * focal_tversky_loss + 0.30 * iou_loss
-
+        
         return total_loss_per_obj.sum()
 
     def calculate_segmentation_loss(
