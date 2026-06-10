@@ -143,7 +143,7 @@ CUSTOM_CLASS = r'''class v8SegmentationLoss(v8DetectionLoss):
         # 2. BOUNDARY (SINIR) LOSS EKLENTİSİ
         gt_unsqueeze = cropped_gt.unsqueeze(0)
         # 5x5 kernel ile sınır bölgesini kalınlaştırıyoruz (daha iyi sınır odaklanması)
-gt_pool = F.max_pool2d(gt_unsqueeze, kernel_size=5, stride=1, padding=2)
+        gt_pool = F.max_pool2d(gt_unsqueeze, kernel_size=5, stride=1, padding=2)
 
         boundary_mask = (gt_pool - gt_unsqueeze) > 0
         boundary_mask = boundary_mask.squeeze(0)
